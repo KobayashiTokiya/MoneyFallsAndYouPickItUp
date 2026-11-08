@@ -21,7 +21,7 @@ void Coin::Initialize(const std::string& modelFilePath, const Vector3& position,
 
 	// デフォルトのテクスチャを割り当て
 	uint32_t uvCheckerTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/uvChecker.png");
-	uint32_t envTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/rostock_laage_airport_4k.dds");
+	uint32_t envTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/white.dds");
 
 	object3d_->SetTextureIndex(uvCheckerTexIndex);
 	object3d_->SetEnvironmentTexture(envTexIndex);
@@ -100,16 +100,16 @@ void Coin::Update()
 // 壁（フチ）に当たった時に外部（GamePlayScene）から呼ばれる処理
 void Coin::OnBounce(const Vector3& bounceDir)
 {
-	// 1. 弾く力を小さくして「フチに引っかかってこぼれ落ちる」程度にする
-	velocity_.x = bounceDir.x * 0.05f; // 0.25f → 0.05f に弱める
-	velocity_.z = bounceDir.z * 0.05f;
+	// 1. 外側へ強く弾き飛ばす（0.05f -> 0.25f に強化）
+	velocity_.x = bounceDir.x * 0.25f;
+	velocity_.z = bounceDir.z * 0.25f;
 
-	// 2. 上に跳ね上げず、そのまま下へ（跳ね返り感を減らしスムーズに落とす）
-	velocity_.y = -0.02f;
+	// 2. 上方向に跳ね上げる力を与えて「コップのフチで跳ね返った感」を出す
+	velocity_.y = 0.15f;
 
-	// 3. 接触したインパクトで回転にランダムなブレを与える
-	rotationSpeed_.x = (static_cast<float>(rand() % 100) / 100.0f - 0.5f) * 0.2f;
-	rotationSpeed_.z = (static_cast<float>(rand() % 100) / 100.0f - 0.5f) * 0.2f;
+	// 3. インパクト時の回転のブレも大きくする
+	rotationSpeed_.x = (static_cast<float>(rand() % 100) / 100.0f - 0.5f) * 0.4f;
+	rotationSpeed_.z = (static_cast<float>(rand() % 100) / 100.0f - 0.5f) * 0.4f;
 }
 
 void Coin::Draw()

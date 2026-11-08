@@ -56,7 +56,7 @@ void GamePlayScene::Initialize()
 	TextureManager::GetInstance()->LoadTexture("Resource/uvChecker.png");
 	TextureManager::GetInstance()->LoadTexture("Resource/circle.png");
 	TextureManager::GetInstance()->LoadTexture("Resource/gradationLine.png");
-	TextureManager::GetInstance()->LoadTexture("Resource/rostock_laage_airport_4k.dds");
+	TextureManager::GetInstance()->LoadTexture("Resource/white.dds");
 	TextureManager::GetInstance()->LoadTexture("Resource/lightning.png");
 	TextureManager::GetInstance()->LoadTexture("Resource/white.png");
 	TextureManager::GetInstance()->LoadTexture("Resource/CoinShadow.png");
@@ -69,7 +69,7 @@ void GamePlayScene::Initialize()
 	uint32_t uvCheckerTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/uvChecker.png");
 	uint32_t whiteTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/white.png");
 	uint32_t floorTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/floor.png");
-	uint32_t envTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/rostock_laage_airport_4k.dds");
+	uint32_t envTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/white.dds");
 	goTexHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/GO!.png");
 
 	ModelManager::GetInstance()->LoadModel("axis.obj");
@@ -103,7 +103,7 @@ void GamePlayScene::Initialize()
 	// スカイボックス
 	SkyboxCommon::GetInstance()->SetDefaultCamera(camera);
 
-	std::string skyboxDDSPath = "Resource/rostock_laage_airport_4k.dds";
+	std::string skyboxDDSPath = "Resource/white.dds";
 	D3D12_GPU_DESCRIPTOR_HANDLE skyboxSRVHandleGPU = TextureManager::GetInstance()->GetSrvHandleGPU(skyboxDDSPath);
 
 	skybox = new Skybox();
@@ -323,6 +323,38 @@ void GamePlayScene::Update()
 			postProcessEnable, effectMode, colorScale,
 			score);
 
+		if (player_)
+		{
+			ImGui::Begin("Player Scale Controller");
+
+			float currentTarget = player_->GetTargetScale().x;
+			if (ImGui::SliderFloat("Target Scale", &currentTarget, 0.2f, 5.0f, "%.2f"))
+			{
+				player_->SetTargetScale(currentTarget);
+			}
+
+			ImGui::Text("Current Scale : %.2f", player_->GetScale().x);
+
+			ImGui::Separator(); // 区切り線
+
+			//ボタンで現在の大きさを一時記憶
+			if (ImGui::Button("Save Current Size"))
+			{
+				player_->SaveCurrentScale();
+			}
+			ImGui::SameLine();
+			//保存した大きさを呼び出し
+			if (ImGui::Button("Load Saved Size"))
+			{
+				player_->LoadSavedScale();
+			}
+
+			// 保存中の値を表示
+			ImGui::Text("Saved Size    : %.2f", player_->GetSavedScale().x);
+
+			ImGui::End();
+		}
+
 		if (postProcessEnable)
 		{
 			if (Input::GetInstance()->TriggerKey(DIK_1)) { effectMode = 0; }
@@ -415,18 +447,21 @@ void GamePlayScene::Update()
 					Vector3 bounceDir{};
 					Vector3 pushedPos{};
 
-					// パラメータ調整
-					float cupHeight = 2.0f;      // コップの高さ
-					float innerRadius = 1.2f;    // ★内径（これを大きくすると影が重なった時に確実に入る）
-					float wallThickness = 0.2f;  // 壁の厚み（薄くして外に弾かれにくくする）
+					// ★ プレイヤーの現在のスケールを取得
+					Vector3 pScale = player_->GetScale();
 
-					// ★順番を変更: まず「中に入っているか（影が重なっているか）」を判定！
+					// ★ 基準パラメータにスケール倍率（X軸またはY軸）を掛ける
+					float cupHeight = 1.5f ;  // 高さを縦スケールに連動
+					float innerRadius = 0.5f * pScale.x;  // 受ける領域を横スケールに連動
+					float wallThickness = 0.5f * pScale.x;  // フチの厚みを横スケールに連動
+
+					// 1. 底（内側）への着地判定（ピッタリ中心でないと入らない）
 					if (CollisionManager::CheckCupBottom(pPos, cPos, cupHeight, innerRadius))
 					{
 						score += coin->GetScore();
-						coin->OnCollect(); // スコア獲得！
+						coin->OnCollect();
 					}
-					// 中に入っていない時だけ、側面（フチ）の弾き判定を行う
+					// 2. フチに当たった時の弾き判定（フチに触れたら押し出されて弾かれる）
 					else if (CollisionManager::CheckCupWallAndGetBounce(pPos, cPos, cupHeight, innerRadius, wallThickness, bounceDir, pushedPos))
 					{
 						coin->SetPosition(pushedPos);

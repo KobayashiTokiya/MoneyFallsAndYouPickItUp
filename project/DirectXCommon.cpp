@@ -39,7 +39,7 @@ void DirectXCommon::DeviceInitialize()
 	HRESULT hr;
 
 #ifdef _DEBUG
-	Microsoft::WRL::ComPtr debugController = nullptr;
+	Microsoft::WRL::ComPtr<ID3D12Debug> debugController = nullptr;
 	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 	{
 		debugController->EnableDebugLayer();
