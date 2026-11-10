@@ -13,7 +13,7 @@ public:
 	~Player();
 
 	void Initialize(const std::string& modelFilePath);
-	void Update();
+	void Update(float timeScale = 1.0f);
 	void Draw();
 
 	//プレイヤーをカウントダウンの時に表示するためのもの
@@ -40,6 +40,10 @@ public:
 	float GetRadius() const { return baseRadius_ * scale_.x; }
 	const Vector3& GetTargetScale() const { return targetScale_; }
 	void SetCamera(Camera* camera) { camera_ = camera; }
+
+	//移動速度の倍率をセットする
+	void SetSpeedMultiplier(float mult) { speedMultiplier_ = mult; }
+	float GetSpeedMultiplier() const { return speedMultiplier_; }
 private:
 	Vector3 position_;
 	Vector3 scale_{ 1.0f, 1.5f, 1.0f }; // ★ 大きさ（デフォルト1.0）
@@ -56,5 +60,8 @@ private:
 
 	std::unique_ptr<Object3d> object3d_ = nullptr;
 	Camera* camera_ = nullptr;
+
+	//速度倍率（通常は 1.0f）
+	float speedMultiplier_ = 1.0f;
 };
 

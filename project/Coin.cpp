@@ -44,46 +44,50 @@ void Coin::Initialize(const std::string& modelFilePath, const Vector3& position,
 
 }
 
-void Coin::Update()
+void Coin::Update(float timeScale)
 {
-	// 毎フレーム各軸ごとに回転を進める
-	rotate_.x += rotationSpeed_.x;
-	rotate_.y += rotationSpeed_.y;
-	rotate_.z += rotationSpeed_.z;
-	
-	velocity_.y -= 0.001f;
+	// 1. 重力を加算（timeScale を掛けてスローに対応）
+	velocity_.y -= 0.001f * timeScale;
 
-	// 1. 速度を位置に反映
-	position_.x += velocity_.x;
-	position_.y += velocity_.y;
-	position_.z += velocity_.z;
+	// 2. 速度を位置に反映（全方向の移動に timeScale を掛ける）
+	position_.x += velocity_.x * timeScale;
+	position_.y += velocity_.y * timeScale;
+	position_.z += velocity_.z * timeScale;
 
-	// 2. 慣性抵抗（弾かれた後の横移動を徐々に減速させる）
+	// 3. 回転処理（スロー中は回転もゆっくりにする）
+	rotate_.x += rotationSpeed_.x * timeScale;
+	rotate_.y += rotationSpeed_.y * timeScale;
+	rotate_.z += rotationSpeed_.z * timeScale;
+
+	// 4. 慣性抵抗（弾かれた後の横移動の減速）
 	velocity_.x *= 0.95f;
 	velocity_.z *= 0.95f;
 
-	// 一定の高さまで落ちたら画面外として削除フラグを立てる
+	// 5. 画面外（落下）判定
 	if (position_.y < -10.0f)
 	{
 		isDead_ = true;
 	}
 
-	// Transform の反映
+	// 6. 3Dオブジェクトの行列更新
 	if (object3d_)
 	{
 		object3d_->SetTranslate(position_);
 		object3d_->SetRotate(rotate_);
-		object3d_->SetScale(scale_);
+
+		// スキル倍率（tempScaleMult_）を掛けて見た目のサイズを反映
+		Vector3 currentScale = { scale_.x * tempScaleMult_, scale_.y * tempScaleMult_, scale_.z * tempScaleMult_ };
+		object3d_->SetScale(currentScale);
 		object3d_->Update();
 	}
 
-	// 影の位置を更新（コインの真下の地面に配置）
+	// 7. 影の位置・スケール更新
 	if (shadowObject3d_)
 	{
 		Vector3 shadowPos = { position_.x, -0.98f, position_.z };
 		Vector3 shadowRotate = { 1.57f, 0.0f, 0.0f };
 
-		// 高さに応じて影の大きさを変える（高いほど影が小さくなる）
+		// 高さに応じて影の大きさを変える
 		float heightFactor = (position_.y - (-0.98f)) / 20.0f;
 		heightFactor = std::clamp(heightFactor, 0.0f, 1.0f);
 		float scaleMultiplier = (1.2f - heightFactor * 0.7f);
@@ -101,15 +105,15 @@ void Coin::Update()
 void Coin::OnBounce(const Vector3& bounceDir)
 {
 	// 1. 外側へ強く弾き飛ばす（0.05f -> 0.25f に強化）
-	velocity_.x = bounceDir.x * 0.25f;
-	velocity_.z = bounceDir.z * 0.25f;
+	velocity_.x = bounceDir.x * 0.15f;
+	velocity_.z = bounceDir.z * 0.15f;
 
 	// 2. 上方向に跳ね上げる力を与えて「コップのフチで跳ね返った感」を出す
-	velocity_.y = 0.15f;
+	velocity_.y = 0.1f;
 
 	// 3. インパクト時の回転のブレも大きくする
-	rotationSpeed_.x = (static_cast<float>(rand() % 100) / 100.0f - 0.5f) * 0.4f;
-	rotationSpeed_.z = (static_cast<float>(rand() % 100) / 100.0f - 0.5f) * 0.4f;
+	rotationSpeed_.x =static_cast<float>(rand() % 50-25)/100.0f;
+	rotationSpeed_.z =static_cast<float>(rand() % 50-25)/100.0f;
 }
 
 void Coin::Draw()

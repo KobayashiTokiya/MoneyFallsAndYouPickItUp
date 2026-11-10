@@ -12,6 +12,7 @@
 #include "LevelLoader.h"
 #include "Player.h"
 #include "Coin.h"
+#include "SkillManager.h"
 
 // 前方宣言
 class Camera;
@@ -57,6 +58,7 @@ private:
 	RenderTexture* renderTexture = nullptr;
 	PostProcess* postProcess = nullptr;
 	std::vector<Object3d*> objects3d_;
+	std::unique_ptr<SkillManager> skillManager_;
 
 	// GPUハンドル
 	D3D12_GPU_DESCRIPTOR_HANDLE ringTexHandle{};
@@ -119,5 +121,8 @@ private:
 	Sprite* countdownSprite_ = nullptr;
 	Sprite* countdownOverlaySprite_ = nullptr;
 	D3D12_GPU_DESCRIPTOR_HANDLE goTexHandle_{};
+
+	//スキルメニューの描画用
+	Sprite* skillMenuSprite_ = nullptr;
 };
 
