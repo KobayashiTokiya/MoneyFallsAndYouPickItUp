@@ -66,13 +66,19 @@ void GamePlayScene::Initialize()
 	TextureManager::GetInstance()->LoadTexture("Resource/player.png");
 	TextureManager::GetInstance()->LoadTexture("Resource/GO!.png");
 	TextureManager::GetInstance()->LoadTexture("Resource/UI/SkillMenu.png");
+	TextureManager::GetInstance()->LoadTexture("Resource/UI/skillUI.png");
+	TextureManager::GetInstance()->LoadTexture("Resource/UI/skillCost.png");
 
 	uint32_t uvCheckerTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/uvChecker.png");
 	uint32_t whiteTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/white.png");
 	uint32_t floorTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/floor.png");
 	uint32_t envTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/white.dds");
 	goTexHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/GO!.png");
+	
+	//スキルUI(2D)
 	uint32_t SkillMenuTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/UI/SkillMenu.png");
+	skillUIHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/UI/skillUI.png");
+	skillCostUIHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/UI/skillCost.png");
 
 	ModelManager::GetInstance()->LoadModel("axis.obj");
 	ModelManager::GetInstance()->LoadModel("plane.obj");
@@ -130,6 +136,18 @@ void GamePlayScene::Initialize()
 	skillMenuSprite_->Initialize(SpriteCommon::GetInstance(), "Resource/UI/SkillMenu.png");
 	skillMenuSprite_->SetSize({ 512.0f, 512.0f });
 	skillMenuSprite_->SetPosition({ 384.0f, 104.0f }); // 画面中央に配置
+
+	skillUISprite_ = new Sprite();
+	skillUISprite_->Initialize(SpriteCommon::GetInstance(), "Resource/UI/skillUI.png");
+	skillUISprite_->SetSize({ 640.0f, 64.0f });
+	skillUISprite_->SetPosition({ 20.0f,30.0f });
+	skillUISprite_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+
+	skillCostUISprite_ = new Sprite();
+	skillCostUISprite_->Initialize(SpriteCommon::GetInstance(), "Resource/UI/skillCost.png");
+	skillCostUISprite_->SetSize({ 256.0f, 512.0f });
+	skillCostUISprite_->SetPosition({ 20.0f,70.0f });
+	skillCostUISprite_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
 
 	// 1. レティクルのサイズを設定（例えば 64x64 や 128x128 などお好みの大きさに）
 	Vector2 reticleSize = { 640.0f, 640.0f };
@@ -434,9 +452,16 @@ void GamePlayScene::Update()
 		if (skillMenuSprite_ && skillManager_ && skillManager_->IsTimeSlowed())
 		{
 			skillMenuSprite_->Update();
+			
 		}
-		
-
+		if (skillUISprite_ && skillManager_ && skillManager_->IsTimeSlowed())
+		{
+			skillUISprite_->Update();
+		}
+		if (skillCostUISprite_ && skillManager_ && skillManager_->IsTimeSlowed())
+		{
+			skillCostUISprite_->Update();
+		}
 		ParticleManager::GetInstance()->Update(camera);
 
 		//カメラモード切替
@@ -573,8 +598,8 @@ void GamePlayScene::Update()
 
 		timeLimit_ -= 1.0f / 60.0f;
 
-		// 制限時間切れ、または ENTER キーで暗転（フェードアウト）開始
-		if ((timeLimit_ <= 0.0f || Input::GetInstance()->TriggerKey(DIK_RETURN)) && !FadeManager::GetInstance()->IsFading())
+		// 制限時間切れ、または ENTER キーで暗転（フェードアウト）開始//|| Input::GetInstance()->TriggerKey(DIK_RETURN))
+		if (timeLimit_ <= 0.0f  && !FadeManager::GetInstance()->IsFading())
 		{
 			FadeManager::GetInstance()->StartFadeOut(0.5f);
 		}
@@ -587,7 +612,7 @@ void GamePlayScene::Update()
 #ifdef USE_IMGUI
 			ImGuiManager::GetInstance()->End();
 #endif
-			SceneManager::GetInstance()->ChangeScene("GAMEOVER");
+			SceneManager::GetInstance()->ChangeScene("CLEAR");
 			return;
 		}
 	}
@@ -674,7 +699,7 @@ void GamePlayScene::Draw()
 	}
 
 	//カメラUIの描画
-	if (cameraUISprite_)
+	if (cameraUISprite_&&!skillManager_->IsTimeSlowed())
 	{
 		D3D12_GPU_DESCRIPTOR_HANDLE cameraUITexHandle = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/UI/CameraUI.png");
 		cameraUISprite_->Draw(DirectXCommon::GetInstance()->GetCommandList(), cameraUITexHandle);
@@ -685,7 +710,16 @@ void GamePlayScene::Draw()
 		D3D12_GPU_DESCRIPTOR_HANDLE skillMenuTexHandle = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/UI/SkillMenu.png");
 		skillMenuSprite_->Draw(DirectXCommon::GetInstance()->GetCommandList(), skillMenuTexHandle);
 	}
-	
+
+	if (skillUISprite_ && skillManager_ && skillManager_->IsTimeSlowed())
+	{
+		skillUISprite_->Draw(DirectXCommon::GetInstance()->GetCommandList(), skillUIHandle_);
+	}
+	if (skillCostUISprite_ && skillManager_ && skillManager_->IsTimeSlowed())
+	{
+		skillCostUISprite_->Draw(DirectXCommon::GetInstance()->GetCommandList(), skillCostUIHandle_);
+	}
+
 	auto commandList = DirectXCommon::GetInstance()->GetCommandList();
 	// -------------------------------------------------------------
 	// スコアの描画（6桁表示）

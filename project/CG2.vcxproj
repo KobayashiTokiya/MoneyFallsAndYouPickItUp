@@ -159,6 +159,7 @@
   <ItemGroup>
     <ClCompile Include="BaseScene.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="Clear.cpp" />
     <ClCompile Include="Coin.cpp" />
     <ClCompile Include="CoinRainSkill.cpp" />
     <ClCompile Include="Collision.cpp" />
@@ -298,6 +299,7 @@
     <ClInclude Include="AbstractSceneFactory.h" />
     <ClInclude Include="BaseScene.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Clear.h" />
     <ClInclude Include="Coin.h" />
     <ClInclude Include="CoinRainSkill.h" />
     <ClInclude Include="Coins.h" />

@@ -124,5 +124,12 @@ private:
 
 	//スキルメニューの描画用
 	Sprite* skillMenuSprite_ = nullptr;
+
+	//スキルUIの描画用
+	Sprite* skillUISprite_ = nullptr;
+	D3D12_GPU_DESCRIPTOR_HANDLE skillUIHandle_{};
+
+	Sprite* skillCostUISprite_ = nullptr;
+	D3D12_GPU_DESCRIPTOR_HANDLE skillCostUIHandle_{};
 };
 
