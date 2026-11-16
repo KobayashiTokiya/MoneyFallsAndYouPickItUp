@@ -20,7 +20,7 @@ void GameoverScene::Initialize()
 	// 1. テクスチャのロード ＆ インデックス／ハンドルの取得
 	TextureManager::GetInstance()->LoadTexture("Resource/white.png");
 	TextureManager::GetInstance()->LoadTexture("Resource/coin(-500).png");
-	TextureManager::GetInstance()->LoadTexture("Resource/rostock_laage_airport_4k.dds");
+	TextureManager::GetInstance()->LoadTexture("Resource/white.dds");
 	TextureManager::GetInstance()->LoadTexture("Resource/floor.png");
 	TextureManager::GetInstance()->LoadTexture("Resource/UI/reset.png");
 
@@ -30,7 +30,7 @@ void GameoverScene::Initialize()
 	
 	//モデルで使用
 	uint32_t whiteTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/white.png");
-	uint32_t envTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/rostock_laage_airport_4k.dds");
+	uint32_t envTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/white.dds");
 	uint32_t floorTexture = TextureManager::GetInstance()->GetSrvIndex("Resource/floor.png");
 	uint32_t coinTexture = TextureManager::GetInstance()->GetSrvIndex("Resource/coin(-500).png");
 

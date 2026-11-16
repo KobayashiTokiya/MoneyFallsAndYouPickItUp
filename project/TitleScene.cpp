@@ -23,6 +23,24 @@
 
 void TitleScene::Initialize()
 {
+	// タイトル用テクスチャのロード
+	TextureManager::GetInstance()->LoadTexture("Resource/white.png");
+	TextureManager::GetInstance()->LoadTexture("Resource/titleBackground.png");
+	TextureManager::GetInstance()->LoadTexture("Resource/UI/title.png");
+
+	TextureManager::GetInstance()->LoadTexture("Resource/Coin(500).png");
+	TextureManager::GetInstance()->LoadTexture("Resource/Coin(100).png");
+	TextureManager::GetInstance()->LoadTexture("Resource/Coin(10).png");
+	TextureManager::GetInstance()->LoadTexture("Resource/Coin(-500).png");
+
+	//タイトル用モデルのロード
+	ModelManager::GetInstance()->LoadModel("title01.obj");
+	ModelManager::GetInstance()->LoadModel("title02.obj");
+	ModelManager::GetInstance()->LoadModel("title03.obj");
+	ModelManager::GetInstance()->LoadModel("start.obj");
+	ModelManager::GetInstance()->LoadModel("end.obj");
+	ModelManager::GetInstance()->LoadModel("Coin.obj");
+
 	// オフスクリーンレンダリング
 	renderTexture = new RenderTexture();
 	renderTexture->Create(DirectXCommon::GetInstance(), SrvManager::GetInstance(), 1280, 720, DXGI_FORMAT_R8G8B8A8_UNORM, rtClearColor);
@@ -53,22 +71,7 @@ void TitleScene::Initialize()
 	sprite = new Sprite();
 	sprite->Initialize(SpriteCommon::GetInstance(), "Resource/UI/title.png");
 
-	// タイトル用テクスチャのロード
-	TextureManager::GetInstance()->LoadTexture("Resource/white.png");
-	TextureManager::GetInstance()->LoadTexture("Resource/titleBackground.png");
 
-	TextureManager::GetInstance()->LoadTexture("Resource/Coin(500).png");
-	TextureManager::GetInstance()->LoadTexture("Resource/Coin(100).png");
-	TextureManager::GetInstance()->LoadTexture("Resource/Coin(10).png");
-	TextureManager::GetInstance()->LoadTexture("Resource/Coin(-500).png");
-
-	//タイトル用モデルのロード
-	ModelManager::GetInstance()->LoadModel("title01.obj");
-	ModelManager::GetInstance()->LoadModel("title02.obj");
-	ModelManager::GetInstance()->LoadModel("title03.obj");
-	ModelManager::GetInstance()->LoadModel("start.obj");
-	ModelManager::GetInstance()->LoadModel("end.obj");
-	ModelManager::GetInstance()->LoadModel("Coin.obj");
 
 	const std::string modelNames[kTitleCount] = { "title01.obj", "title02.obj", "title03.obj" };
 	uint32_t titleTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/Coin(500).png");

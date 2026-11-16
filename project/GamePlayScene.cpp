@@ -56,7 +56,7 @@ void GamePlayScene::Initialize()
 	TextureManager::GetInstance()->LoadTexture("Resource/uvChecker.png");
 	TextureManager::GetInstance()->LoadTexture("Resource/circle.png");
 	TextureManager::GetInstance()->LoadTexture("Resource/gradationLine.png");
-	TextureManager::GetInstance()->LoadTexture("Resource/rostock_laage_airport_4k.dds");
+	TextureManager::GetInstance()->LoadTexture("Resource/white.dds");
 	TextureManager::GetInstance()->LoadTexture("Resource/lightning.png");
 	TextureManager::GetInstance()->LoadTexture("Resource/white.png");
 	TextureManager::GetInstance()->LoadTexture("Resource/CoinShadow.png");
@@ -65,12 +65,20 @@ void GamePlayScene::Initialize()
 	TextureManager::GetInstance()->LoadTexture("Resource/UI/CameraUI.png");
 	TextureManager::GetInstance()->LoadTexture("Resource/player.png");
 	TextureManager::GetInstance()->LoadTexture("Resource/GO!.png");
+	TextureManager::GetInstance()->LoadTexture("Resource/UI/SkillMenu.png");
+	TextureManager::GetInstance()->LoadTexture("Resource/UI/skillUI.png");
+	TextureManager::GetInstance()->LoadTexture("Resource/UI/skillCost.png");
 
 	uint32_t uvCheckerTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/uvChecker.png");
 	uint32_t whiteTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/white.png");
 	uint32_t floorTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/floor.png");
-	uint32_t envTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/rostock_laage_airport_4k.dds");
+	uint32_t envTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/white.dds");
 	goTexHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/GO!.png");
+	
+	//スキルUI(2D)
+	uint32_t SkillMenuTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/UI/SkillMenu.png");
+	skillUIHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/UI/skillUI.png");
+	skillCostUIHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/UI/skillCost.png");
 
 	ModelManager::GetInstance()->LoadModel("axis.obj");
 	ModelManager::GetInstance()->LoadModel("plane.obj");
@@ -94,6 +102,9 @@ void GamePlayScene::Initialize()
 	object3d->SetTextureIndex(floorTexIndex);
 	//object3d->SetEnvironmentTexture(envTexIndex);
 
+	//スキルマネージャーの生成と初期化
+	skillManager_ = std::make_unique<SkillManager>();
+	skillManager_->Initialize();
 
 	ringTexHandle = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/circle.png");
 	cylinderTexHandle = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/gradationLine.png");
@@ -103,7 +114,7 @@ void GamePlayScene::Initialize()
 	// スカイボックス
 	SkyboxCommon::GetInstance()->SetDefaultCamera(camera);
 
-	std::string skyboxDDSPath = "Resource/rostock_laage_airport_4k.dds";
+	std::string skyboxDDSPath = "Resource/white.dds";
 	D3D12_GPU_DESCRIPTOR_HANDLE skyboxSRVHandleGPU = TextureManager::GetInstance()->GetSrvHandleGPU(skyboxDDSPath);
 
 	skybox = new Skybox();
@@ -120,6 +131,23 @@ void GamePlayScene::Initialize()
 	cameraUISprite_->Initialize(SpriteCommon::GetInstance(),"Resource/UI/CameraUI.png");
 	cameraUISprite_->SetSize({ 256.0f, 64.0f });
 	cameraUISprite_->SetPosition({ 20.0f, 30.0f });
+
+	skillMenuSprite_ = new Sprite();
+	skillMenuSprite_->Initialize(SpriteCommon::GetInstance(), "Resource/UI/SkillMenu.png");
+	skillMenuSprite_->SetSize({ 512.0f, 512.0f });
+	skillMenuSprite_->SetPosition({ 384.0f, 104.0f }); // 画面中央に配置
+
+	skillUISprite_ = new Sprite();
+	skillUISprite_->Initialize(SpriteCommon::GetInstance(), "Resource/UI/skillUI.png");
+	skillUISprite_->SetSize({ 640.0f, 64.0f });
+	skillUISprite_->SetPosition({ 20.0f,30.0f });
+	skillUISprite_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+
+	skillCostUISprite_ = new Sprite();
+	skillCostUISprite_->Initialize(SpriteCommon::GetInstance(), "Resource/UI/skillCost.png");
+	skillCostUISprite_->SetSize({ 256.0f, 512.0f });
+	skillCostUISprite_->SetPosition({ 20.0f,70.0f });
+	skillCostUISprite_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
 
 	// 1. レティクルのサイズを設定（例えば 64x64 や 128x128 などお好みの大きさに）
 	Vector2 reticleSize = { 640.0f, 640.0f };
@@ -331,17 +359,48 @@ void GamePlayScene::Update()
 			if (Input::GetInstance()->TriggerKey(DIK_4)) { effectMode = 3; }
 			if (Input::GetInstance()->TriggerKey(DIK_5)) { effectMode = 4; }
 		}
-#endif
 
+		skillManager_->DrawImGui(score);
+#endif
+		// 1. スキルマネージャーの更新
+		float deltaTime = 1.0f / 60.0f;
+		skillManager_->Update(deltaTime, player_.get(), score);
+
+		// コインの雨が発動したらプレイヤーの頭上にコイン5個を生成
+		if (skillManager_->PopCoinRainTrigger() && player_)
+		{
+			Vector3 pPos = player_->GetPosition();
+
+			for (int i = 0; i < 5; ++i)
+			{
+				// プレイヤーの周囲（X, Z）に少しバラけさせる
+				float offsetX = static_cast<float>(rand() % 7 - 3) * 0.8f; // -2.4 〜 +2.4
+				float offsetZ = static_cast<float>(rand() % 7 - 3) * 0.8f;
+				// 高さ（Y）を少しづつズラして階段状に落とす
+				float spawnY = pPos.y + 20.0f + static_cast<float>(i * 3);
+
+				auto newCoin = std::make_unique<Coin500>();
+				newCoin->Initialize("Coin.obj", { pPos.x + offsetX, spawnY, pPos.z + offsetZ }, { 1.0f, 1.0f, 1.0f });
+				newCoin->Update();
+				coins_.push_back(std::move(newCoin));
+			}
+		}
+
+		// 2. スロー倍率を取得
+		float timeScale = skillManager_->GetTimeScale();
+		
 		// プレイヤーの更新
 		if (player_)
 		{
-			player_->Update();
+			player_->Update(timeScale);
 		}
-
-		if (Input::GetInstance()->TriggerKey(DIK_1)) { camera->SetMode(Camera::Mode::Normal); }
-		if (Input::GetInstance()->TriggerKey(DIK_2)) { camera->SetMode(Camera::Mode::TopDown); }
-		if (Input::GetInstance()->TriggerKey(DIK_3)) { camera->SetMode(Camera::Mode::BottomUp); }
+		
+		if (!Input::GetInstance()->PushKey(DIK_E))
+		{
+			if (Input::GetInstance()->TriggerKey(DIK_1)) { camera->SetMode(Camera::Mode::Normal); }
+			if (Input::GetInstance()->TriggerKey(DIK_2)) { camera->SetMode(Camera::Mode::TopDown); }
+			if (Input::GetInstance()->TriggerKey(DIK_3)) { camera->SetMode(Camera::Mode::BottomUp); }
+		}
 
 		if (camera && player_)
 		{
@@ -390,7 +449,19 @@ void GamePlayScene::Update()
 		{
 			cameraUISprite_->Update();
 		}
-
+		if (skillMenuSprite_ && skillManager_ && skillManager_->IsTimeSlowed())
+		{
+			skillMenuSprite_->Update();
+			
+		}
+		if (skillUISprite_ && skillManager_ && skillManager_->IsTimeSlowed())
+		{
+			skillUISprite_->Update();
+		}
+		if (skillCostUISprite_ && skillManager_ && skillManager_->IsTimeSlowed())
+		{
+			skillCostUISprite_->Update();
+		}
 		ParticleManager::GetInstance()->Update(camera);
 
 		//カメラモード切替
@@ -399,42 +470,81 @@ void GamePlayScene::Update()
 			isDebugCamera_ = !isDebugCamera_;
 		}
 
+		// 6キーの時、スキル発動中なら0.5倍（半分）、通常時は1.0倍
+		float coinScaleMult = skillManager_->IsSmallCoinActive() ? 0.5f : 1.0f;
 
-		// 1. コインの更新 ＆ 当たり判定
+		// 1. コインの更新（スロー倍率適用） ＆ 当たり判定
 		for (auto& coin : coins_)
 		{
 			if (coin && !coin->IsDead())
 			{
-				coin->Update();
+				// コインに倍率をセット
+				coin->SetTemporaryScaleMultiplier(coinScaleMult);
+
+				// マグネット効果の適用
+				skillManager_->ApplyMagnetEffect(player_.get(), coin.get());
 
 				if (player_)
 				{
 					Vector3 pPos = player_->GetPosition();
 					Vector3 cPos = coin->GetPosition();
+					Vector3 pScale = player_->GetScale();
+
+					float cupHeight = 1.5f * pScale.y;
+					float innerRadius = 0.8f * pScale.x;
+					float wallThickness = 0.3f * pScale.x;
+
+					// XZ平面（横方向）の距離
+					float dx = cPos.x - pPos.x;
+					float dz = cPos.z - pPos.z;
+					float distXZ = std::sqrt(dx * dx + dz * dz);
+
+					float bottomY = pPos.y;
+					float topY = pPos.y + cupHeight;
+
+					// カップの内側に入ったら加速（突き抜けないよう -0.3f に少しマイルド化）
+					if (cPos.y >= bottomY && cPos.y <= topY && distXZ < innerRadius)
+					{
+						coin->SetVelocityY(-0.3f);
+					}
+
+					// 移動更新
+					coin->Update(timeScale);
+
+					// 更新後の最新位置を取得
+					cPos = coin->GetPosition();
 
 					Vector3 bounceDir{};
 					Vector3 pushedPos{};
 
-					// パラメータ調整
-					float cupHeight = 2.0f;      // コップの高さ
-					float innerRadius = 1.2f;    // ★内径（これを大きくすると影が重なった時に確実に入る）
-					float wallThickness = 0.2f;  // 壁の厚み（薄くして外に弾かれにくくする）
-
-					// ★順番を変更: まず「中に入っているか（影が重なっているか）」を判定！
-					if (CollisionManager::CheckCupBottom(pPos, cPos, cupHeight, innerRadius))
+					//カップの内側にいて底（bottomY）まで到達・突き抜けた場合は確定で回収！
+					if (distXZ < innerRadius && cPos.y <= bottomY + 0.8f && cPos.y >= bottomY - 1.5f)
 					{
-						score += coin->GetScore();
-						coin->OnCollect(); // スコア獲得！
+						int gainScore = coin->GetScore() * skillManager_->GetScoreMultiplier();
+						score += gainScore;
+						coin->OnCollect();
 					}
-					// 中に入っていない時だけ、側面（フチ）の弾き判定を行う
+					// 通常の着地判定
+					else if (CollisionManager::CheckCupBottom(pPos, cPos, cupHeight, innerRadius))
+					{
+						int gainScore = coin->GetScore() * skillManager_->GetScoreMultiplier();
+						score += gainScore;
+						coin->OnCollect();
+					}
+					// フチ弾き判定
 					else if (CollisionManager::CheckCupWallAndGetBounce(pPos, cPos, cupHeight, innerRadius, wallThickness, bounceDir, pushedPos))
 					{
 						coin->SetPosition(pushedPos);
 						coin->OnBounce(bounceDir);
 					}
 				}
+				else
+				{
+					coin->Update(timeScale);
+				}
 			}
 		}
+		
 
 		// 2. 画面外（地下 -10.0f）に落ちた、またはプレイヤーに触れて IsDead() が true になったコインを削除
 		coins_.erase(
@@ -488,8 +598,8 @@ void GamePlayScene::Update()
 
 		timeLimit_ -= 1.0f / 60.0f;
 
-		// 制限時間切れ、または ENTER キーで暗転（フェードアウト）開始
-		if ((timeLimit_ <= 0.0f || Input::GetInstance()->TriggerKey(DIK_RETURN)) && !FadeManager::GetInstance()->IsFading())
+		// 制限時間切れ、または ENTER キーで暗転（フェードアウト）開始//|| Input::GetInstance()->TriggerKey(DIK_RETURN))
+		if (timeLimit_ <= 0.0f  && !FadeManager::GetInstance()->IsFading())
 		{
 			FadeManager::GetInstance()->StartFadeOut(0.5f);
 		}
@@ -502,7 +612,7 @@ void GamePlayScene::Update()
 #ifdef USE_IMGUI
 			ImGuiManager::GetInstance()->End();
 #endif
-			SceneManager::GetInstance()->ChangeScene("GAMEOVER");
+			SceneManager::GetInstance()->ChangeScene("CLEAR");
 			return;
 		}
 	}
@@ -589,12 +699,27 @@ void GamePlayScene::Draw()
 	}
 
 	//カメラUIの描画
-	if (cameraUISprite_)
+	if (cameraUISprite_&&!skillManager_->IsTimeSlowed())
 	{
 		D3D12_GPU_DESCRIPTOR_HANDLE cameraUITexHandle = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/UI/CameraUI.png");
 		cameraUISprite_->Draw(DirectXCommon::GetInstance()->GetCommandList(), cameraUITexHandle);
 	}
-	
+
+	if (skillMenuSprite_ && skillManager_ && skillManager_->IsTimeSlowed())
+	{
+		D3D12_GPU_DESCRIPTOR_HANDLE skillMenuTexHandle = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/UI/SkillMenu.png");
+		skillMenuSprite_->Draw(DirectXCommon::GetInstance()->GetCommandList(), skillMenuTexHandle);
+	}
+
+	if (skillUISprite_ && skillManager_ && skillManager_->IsTimeSlowed())
+	{
+		skillUISprite_->Draw(DirectXCommon::GetInstance()->GetCommandList(), skillUIHandle_);
+	}
+	if (skillCostUISprite_ && skillManager_ && skillManager_->IsTimeSlowed())
+	{
+		skillCostUISprite_->Draw(DirectXCommon::GetInstance()->GetCommandList(), skillCostUIHandle_);
+	}
+
 	auto commandList = DirectXCommon::GetInstance()->GetCommandList();
 	// -------------------------------------------------------------
 	// スコアの描画（6桁表示）
@@ -765,6 +890,12 @@ void GamePlayScene::Finalize()
 	{
 		delete cameraUISprite_;
 		cameraUISprite_ = nullptr;
+	}
+
+	if (skillMenuSprite_)
+	{
+		delete skillMenuSprite_;
+		skillMenuSprite_ = nullptr;
 	}
 
 	for (auto* obj : objects3d_)

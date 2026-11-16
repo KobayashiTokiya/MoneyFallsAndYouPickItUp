@@ -11,7 +11,7 @@ public:
 	virtual ~Coin() = default;
 
 	virtual void Initialize(const std::string& modelFilePath, const Vector3& position, const Vector3& scale, int score=0);
-	virtual void Update();
+	virtual void Update(float timeScale = 1.0f);
 	virtual void Draw();
 
 	// プレイヤーと接触した時の効果（子クラスでオーバーライドする）
@@ -48,8 +48,12 @@ public:
 	void OnBounce(const Vector3& bounceDir);
 	
 	void SetPosition(const Vector3& pos) { position_ = pos; }
-
 	void SetFallSpeed(float speed) { fallSpeed_ = speed; }
+	//playerの中に入ったコインの落下速度を速くする
+	void SetVelocityY(float velocityY) { velocity_.y = velocityY; }
+	// スケールの倍率変更（スキル用）
+	void SetTemporaryScaleMultiplier(float mult) { tempScaleMult_ = mult; }
+
 private:
 	Vector3 position_ = { 0.0f, 0.0f, 0.0f };
 	Vector3 rotate_ = { 0.0f, 0.0f, 0.0f };
@@ -68,7 +72,10 @@ private:
 	std::unique_ptr<Object3d> object3d_ = nullptr;
 	std::unique_ptr<Object3d> shadowObject3d_ = nullptr;
 
-	//はじく用の
+	//はじく用
 	Vector3 velocity_ = { 0.0f, -0.05f, 0.0f };
+
+	//スモールサイズ
+	float tempScaleMult_ = 1.0f;
 };
 

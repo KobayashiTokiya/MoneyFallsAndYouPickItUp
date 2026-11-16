@@ -159,7 +159,9 @@
   <ItemGroup>
     <ClCompile Include="BaseScene.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="Clear.cpp" />
     <ClCompile Include="Coin.cpp" />
+    <ClCompile Include="CoinRainSkill.cpp" />
     <ClCompile Include="Collision.cpp" />
     <ClCompile Include="CollisionManager.cpp" />
     <ClCompile Include="D3DResourceLeakChecker.cpp" />
@@ -173,6 +175,7 @@
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="LevelLoader.cpp" />
     <ClCompile Include="Logger.cpp" />
+    <ClCompile Include="MagnetSkill.cpp" />
     <ClCompile Include="main.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
@@ -190,9 +193,14 @@
     <ClCompile Include="GameoverScene.cpp" />
     <ClCompile Include="SceneFactory.cpp" />
     <ClCompile Include="SceneManager.cpp" />
+    <ClCompile Include="ScoreBoostSkill.cpp" />
     <ClCompile Include="ScoreManager.cpp" />
+    <ClCompile Include="BigCupSkill.cpp" />
+    <ClCompile Include="SkillManager.cpp" />
     <ClCompile Include="Skybox.cpp" />
     <ClCompile Include="SkyboxCommon.cpp" />
+    <ClCompile Include="SmallCoinSkill.cpp" />
+    <ClCompile Include="SpeedUpSkill.cpp" />
     <ClCompile Include="Sprite.cpp" />
     <ClCompile Include="SpriteCommon.cpp" />
     <ClCompile Include="SrvManager.cpp" />
@@ -291,7 +299,9 @@
     <ClInclude Include="AbstractSceneFactory.h" />
     <ClInclude Include="BaseScene.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Clear.h" />
     <ClInclude Include="Coin.h" />
+    <ClInclude Include="CoinRainSkill.h" />
     <ClInclude Include="Coins.h" />
     <ClInclude Include="Collision.h" />
     <ClInclude Include="CollisionManager.h" />
@@ -314,6 +324,7 @@
     <ClInclude Include="Input.h" />
     <ClInclude Include="LevelLoader.h" />
     <ClInclude Include="Logger.h" />
+    <ClInclude Include="MagnetSkill.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="ModelCommon.h" />
     <ClInclude Include="ModelManager.h" />
@@ -326,7 +337,13 @@
     <ClInclude Include="GameoverScene.h" />
     <ClInclude Include="SceneFactory.h" />
     <ClInclude Include="SceneManager.h" />
+    <ClInclude Include="ScoreBoostSkill.h" />
     <ClInclude Include="ScoreManager.h" />
+    <ClInclude Include="BigCupSkill.h" />
+    <ClInclude Include="ISkill.h" />
+    <ClInclude Include="SkillManager.h" />
+    <ClInclude Include="SmallCoinSkill.h" />
+    <ClInclude Include="SpeedUpSkill.h" />
     <ClInclude Include="Sprite.h" />
     <ClInclude Include="SpriteCommon.h" />
     <ClInclude Include="SrvManager.h" />
