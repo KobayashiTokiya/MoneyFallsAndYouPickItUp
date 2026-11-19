@@ -54,6 +54,14 @@ void Object3d::Update()
 		transformationMatrixData->WVP = worldViewProjectionMatrix;
 		transformationMatrixData->World = worldMatrix;
 	}
+
+	if (directionalLightData)
+	{
+		auto common = Object3dCommon::GetInstance();
+		directionalLightData->direction = common->GetLightDirection();
+		directionalLightData->color = common->GetLightColor();
+		directionalLightData->intensity = common->GetLightIntensity();
+	}
 }
 
 void Object3d::Draw()
@@ -122,7 +130,7 @@ void Object3d::CreateDirectionalLightData()
 	directionalLightResource->Map(0, nullptr, reinterpret_cast<void**>(&directionalLightData));
 
 	directionalLightData->color = { 1.0f, 1.0f, 1.0f, 1.0f };
-	directionalLightData->direction = { 0.0f, -1.0f, 0.0f };
+	directionalLightData->direction = { 0.3f, 0.8f, 0.5f };
 	directionalLightData->intensity = 1.0f;
 }
 #pragma endregion

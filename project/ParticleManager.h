@@ -19,7 +19,8 @@ enum class ParticleType
 	kRing,
 	kCylinder,
 	kSphere,
-	kLightning
+	kLightning,
+	kFirework
 };
 
 struct Particle
@@ -96,6 +97,9 @@ public:
 	
 	void EmitComboExplosion(const Vector3& position);
 
+	// クリア演出用：指定座標にカラフルな花火を打ち上げる
+	void EmitFirework(const Vector3& position);
+
 	void DrawImGui();
 
 	D3D12_BLEND_DESC GetBlendDesc(BlendMode mode);
@@ -135,7 +139,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12RootSignature>rootSignature_;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState>graphicsPipelineState_[static_cast<int>(BlendMode::kCountOfBlendMode)];
 
-	const uint32_t kNumMaxInstance = 100;
+	const uint32_t kNumMaxInstance = 300;
 	uint32_t numInstance = 0;
 	//メンバ変数として頂点リストを持つようにする
 	std::vector<VertexData> vertices_;
@@ -180,5 +184,5 @@ private:
 
 	bool isTriggeredInazumaBreak = false; // イナズマブレイク中かどうかのフラグ
 	float inazumaBreakTimer = 0.0f;       // 演出開始からの経過時間
-	Vector3 inazumaBreakPosition;         // 発生させる座標
+	Vector3 inazumaBreakPosition;  // 発生させる座標
 };

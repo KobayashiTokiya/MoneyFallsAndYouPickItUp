@@ -180,6 +180,18 @@ void ParticleManager::Update(Camera* camera)
 			it->transform.translate.y += it->velocity.y * kDeltaTime;
 			it->transform.translate.z += it->velocity.z * kDeltaTime;
 		}
+		else if (it->type == ParticleType::kFirework)
+		{
+			it->transform.translate.x += it->velocity.x * kDeltaTime;
+			it->transform.translate.y += it->velocity.y * kDeltaTime;
+			it->transform.translate.z += it->velocity.z * kDeltaTime;
+			//空気抵抗
+			it->velocity.x *= 0.94f;
+			it->velocity.y *= 0.94f;
+			it->velocity.z *= 0.94f;
+			//重力で垂れ下がる
+			it->velocity.y -= 2.5f * kDeltaTime;
+		}
 		else
 		{
 			it->transform.scale.x += expansionSpeed * kDeltaTime;
@@ -301,6 +313,8 @@ void ParticleManager::Draw(
 	// 稲妻（Lightning）を描画する直前で、加算ブレンド（Add）に切り替える！
 	commandList->SetPipelineState(graphicsPipelineState_[static_cast<int>(BlendMode::kBlendModeAdd)].Get());
 	DrawType(ParticleType::kLightning, lightningSrvHandle, &lightningVertexBufferView_, lightningVertices_.size());
+	DrawType(ParticleType::kFirework, sphereSrvHandle, &sphereVertexBufferView_, sphereVertices_.size());
+
 }
 
 std::list<Particle> ParticleManager::Emit(const Emitter& emitter, std::mt19937& randomEngine)
@@ -335,6 +349,59 @@ void ParticleManager::EmitComboExplosion(const Vector3& position)
 	currentSpawnType = backupType;
 }
 
+void ParticleManager::EmitFirework(const Vector3& position)
+{
+	ParticleType backupType = currentSpawnType;
+	currentSpawnType = ParticleType::kFirework;
+	Emitter sparkEmitter = emitter;
+	sparkEmitter.transform.translate = position;
+	sparkEmitter.count = 100;
+	auto sparkList = Emit(sparkEmitter, randomEngine_);
+
+	// 花火の色をランダムに1色決める（金・赤・水色・緑・ピンク）
+	const Vector4 colors[] = {
+		{ 1.0f, 0.85f, 0.1f, 1.0f },  // 金
+		{ 1.0f, 0.25f, 0.25f, 1.0f }, // 赤
+		{ 0.2f, 0.85f, 1.0f, 1.0f },  // 水色
+		{ 0.3f, 1.0f, 0.4f, 1.0f },   // 緑
+		{ 1.0f, 0.4f, 0.9f, 1.0f },   // ピンク
+		{ 1.0f, 0.55f, 0.1f, 1.0f },  // オレンジ
+	};
+	const int colorCount = static_cast<int>(sizeof(colors) / sizeof(colors[0]));
+
+	const float kPi = 3.14159265f;
+	for (auto& p : sparkList)
+	{
+		// 爆発の中心点から一斉に飛び出す
+		p.transform.translate = position;
+		p.lifeTime = 0.8f + static_cast<float>(rand() % 30) * 0.01f;
+
+		// ★ ループの中で毎回抽選して、1粒ずつ色をバラバラにする
+		p.color = colors[rand() % colorCount];
+
+		// 火の粉らしい小さめの丸にする
+		float s = 0.08f + static_cast<float>(rand() % 7) * 0.01f;
+		p.transform.scale = { s, s, s };
+
+		// 球状（360度）のランダムな方向ベクトルを計算
+		float theta = (static_cast<float>(rand()) / RAND_MAX) * 2.0f * kPi;
+		float cosPhi = (static_cast<float>(rand()) / RAND_MAX) * 2.0f - 1.0f;
+		float sinPhi = std::sqrt(1.0f - cosPhi * cosPhi);
+
+		// 飛び散るスピード
+		float speed = 10.0f + (static_cast<float>(rand()) / RAND_MAX) * 5.0f;
+
+		p.velocity = {
+			sinPhi * std::cos(theta) * speed,
+			cosPhi * speed,
+			sinPhi * std::sin(theta) * speed
+		};
+	}
+
+	particles.splice(particles.end(), sparkList);
+
+	currentSpawnType = backupType;
+}
 void ParticleManager::DrawImGui()
 {
 #ifdef USE_IMGUI

@@ -68,12 +68,15 @@ void GamePlayScene::Initialize()
 	TextureManager::GetInstance()->LoadTexture("Resource/UI/SkillMenu.png");
 	TextureManager::GetInstance()->LoadTexture("Resource/UI/skillUI.png");
 	TextureManager::GetInstance()->LoadTexture("Resource/UI/skillCost.png");
+	TextureManager::GetInstance()->LoadTexture("Resource/UI/enter(clear).png");
 
 	uint32_t uvCheckerTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/uvChecker.png");
 	uint32_t whiteTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/white.png");
 	uint32_t floorTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/floor.png");
 	uint32_t envTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/white.dds");
 	goTexHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/GO!.png");
+
+	clearTexIndex = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/UI/enter(clear).png");
 	
 	//スキルUI(2D)
 	uint32_t SkillMenuTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/UI/SkillMenu.png");
@@ -105,6 +108,9 @@ void GamePlayScene::Initialize()
 	//スキルマネージャーの生成と初期化
 	skillManager_ = std::make_unique<SkillManager>();
 	skillManager_->Initialize();
+
+	stageManager_ = std::make_unique<StageManager>();
+	stageManager_->Initialize();
 
 	ringTexHandle = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/circle.png");
 	cylinderTexHandle = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/gradationLine.png");
@@ -148,6 +154,12 @@ void GamePlayScene::Initialize()
 	skillCostUISprite_->SetSize({ 256.0f, 512.0f });
 	skillCostUISprite_->SetPosition({ 20.0f,70.0f });
 	skillCostUISprite_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+
+	clearUISprite_ = new Sprite();
+	clearUISprite_->Initialize(SpriteCommon::GetInstance(), "Resource/UI/enter(clear).png");
+	clearUISprite_->SetSize({ 520.0f, 64.0f });
+	clearUISprite_->SetPosition({380.0f,620.0f });
+	clearUISprite_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
 
 	// 1. レティクルのサイズを設定（例えば 64x64 や 128x128 などお好みの大きさに）
 	Vector2 reticleSize = { 640.0f, 640.0f };
@@ -334,7 +346,7 @@ void GamePlayScene::Update()
 
 		if (reticleSprite_) reticleSprite_->Update();
 		if (cameraUISprite_) cameraUISprite_->Update();
-
+		if (clearUISprite_) clearUISprite_->Update();
 		// ★ カウントダウン中はプレイヤー・コイン・タイマーの更新を行わずに処理を抜ける
 		return;
 	}
@@ -360,7 +372,9 @@ void GamePlayScene::Update()
 			if (Input::GetInstance()->TriggerKey(DIK_5)) { effectMode = 4; }
 		}
 
+		stageManager_->DrawUI();
 		skillManager_->DrawImGui(score);
+		ImGuiManager::GetInstance()->UpdateLightUI();
 #endif
 		// 1. スキルマネージャーの更新
 		float deltaTime = 1.0f / 60.0f;
@@ -461,6 +475,11 @@ void GamePlayScene::Update()
 		if (skillCostUISprite_ && skillManager_ && skillManager_->IsTimeSlowed())
 		{
 			skillCostUISprite_->Update();
+		}
+
+		if (clearUISprite_)
+		{
+			clearUISprite_->Update();
 		}
 		ParticleManager::GetInstance()->Update(camera);
 
@@ -598,11 +617,25 @@ void GamePlayScene::Update()
 
 		timeLimit_ -= 1.0f / 60.0f;
 
+		stageManager_->Update(score);
+
 		// 制限時間切れ、または ENTER キーで暗転（フェードアウト）開始//|| Input::GetInstance()->TriggerKey(DIK_RETURN))
-		if (timeLimit_ <= 0.0f  && !FadeManager::GetInstance()->IsFading())
+		if ((stageManager_->IsAllClear() || stageManager_->IsGameOver()) && !FadeManager::GetInstance()->IsFading())
 		{
 			FadeManager::GetInstance()->StartFadeOut(0.5f);
 		}
+
+
+		if (Input::GetInstance()->PushKey(DIK_RETURN))
+		{
+			SceneManager::GetInstance()->ChangeScene("CLEAR");
+		}
+#ifdef USE_IMGUI
+		
+#endif // USE_IMGUI
+
+		
+
 
 		// 暗転完了時にタイトルへ戻る
 		if (FadeManager::GetInstance()->GetStatus() == FadeManager::Status::kFadeOut &&
@@ -612,7 +645,15 @@ void GamePlayScene::Update()
 #ifdef USE_IMGUI
 			ImGuiManager::GetInstance()->End();
 #endif
-			SceneManager::GetInstance()->ChangeScene("CLEAR");
+			if (stageManager_->IsAllClear())
+			{
+				SceneManager::GetInstance()->ChangeScene("CLEAR");
+			}
+			else
+			{
+				SceneManager::GetInstance()->ChangeScene("GAMEOVER");
+			}
+
 			return;
 		}
 	}
@@ -718,6 +759,11 @@ void GamePlayScene::Draw()
 	if (skillCostUISprite_ && skillManager_ && skillManager_->IsTimeSlowed())
 	{
 		skillCostUISprite_->Draw(DirectXCommon::GetInstance()->GetCommandList(), skillCostUIHandle_);
+	}
+
+	if (clearUISprite_)
+	{
+		clearUISprite_->Draw(DirectXCommon::GetInstance()->GetCommandList(), clearTexIndex);
 	}
 
 	auto commandList = DirectXCommon::GetInstance()->GetCommandList();
@@ -860,6 +906,12 @@ void GamePlayScene::Finalize()
 	{
 		delete minusSprite_;
 		minusSprite_ = nullptr;
+	}
+
+	if (clearUISprite_)
+	{
+		delete clearUISprite_;
+		clearUISprite_ = nullptr;
 	}
 
 	if (object3d)

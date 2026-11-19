@@ -48,6 +48,16 @@ public:
 		Vector3& cameraTranslate, Vector3& cameraRotate, bool& skydomeSwith
 	);
 
+	// 全シーン共通：ライトのリアルタイム調整＆保存UI
+	void UpdateLightUI();
+
+	// クリア画面用UI（調整したい項目に合わせて増減できます）
+	void UpdateClearUI(
+		Vector3& playerTranslate, Vector3& playerRotate, Vector3& playerScale,
+		Vector3& clearTranslate, Vector3& clearScale,
+		Vector3& cameraTranslate, Vector3& cameraTarget
+	);
+
 private:
 	ImGuiManager() = default;
 	~ImGuiManager() = default;
