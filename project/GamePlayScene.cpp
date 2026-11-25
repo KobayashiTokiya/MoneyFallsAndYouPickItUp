@@ -75,8 +75,6 @@ void GamePlayScene::Initialize()
 	uint32_t floorTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/floor.png");
 	uint32_t envTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/white.dds");
 	goTexHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/GO!.png");
-
-	clearTexIndex = TextureManager::GetInstance()->GetSrvHandleGPU("Resource/UI/enter(clear).png");
 	
 	//スキルUI(2D)
 	uint32_t SkillMenuTexIndex = TextureManager::GetInstance()->GetSrvIndex("Resource/UI/SkillMenu.png");
@@ -155,11 +153,7 @@ void GamePlayScene::Initialize()
 	skillCostUISprite_->SetPosition({ 20.0f,70.0f });
 	skillCostUISprite_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
 
-	clearUISprite_ = new Sprite();
-	clearUISprite_->Initialize(SpriteCommon::GetInstance(), "Resource/UI/enter(clear).png");
-	clearUISprite_->SetSize({ 520.0f, 64.0f });
-	clearUISprite_->SetPosition({380.0f,620.0f });
-	clearUISprite_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+	
 
 	// 1. レティクルのサイズを設定（例えば 64x64 や 128x128 などお好みの大きさに）
 	Vector2 reticleSize = { 640.0f, 640.0f };
@@ -346,7 +340,6 @@ void GamePlayScene::Update()
 
 		if (reticleSprite_) reticleSprite_->Update();
 		if (cameraUISprite_) cameraUISprite_->Update();
-		if (clearUISprite_) clearUISprite_->Update();
 		// ★ カウントダウン中はプレイヤー・コイン・タイマーの更新を行わずに処理を抜ける
 		return;
 	}
@@ -477,10 +470,6 @@ void GamePlayScene::Update()
 			skillCostUISprite_->Update();
 		}
 
-		if (clearUISprite_)
-		{
-			clearUISprite_->Update();
-		}
 		ParticleManager::GetInstance()->Update(camera);
 
 		//カメラモード切替
@@ -541,6 +530,8 @@ void GamePlayScene::Update()
 					{
 						int gainScore = coin->GetScore() * skillManager_->GetScoreMultiplier();
 						score += gainScore;
+						// ★ カップの口元の高さからキラキラ発生
+						ParticleManager::GetInstance()->EmitCoinGet({ cPos.x, pPos.y + cupHeight, cPos.z }, coin->GetScore());
 						coin->OnCollect();
 					}
 					// 通常の着地判定
@@ -548,6 +539,8 @@ void GamePlayScene::Update()
 					{
 						int gainScore = coin->GetScore() * skillManager_->GetScoreMultiplier();
 						score += gainScore;
+						// ★ カップの口元の高さからキラキラ発生
+						ParticleManager::GetInstance()->EmitCoinGet({ cPos.x, pPos.y + cupHeight, cPos.z }, coin->GetScore());
 						coin->OnCollect();
 					}
 					// フチ弾き判定
@@ -555,6 +548,8 @@ void GamePlayScene::Update()
 					{
 						coin->SetPosition(pushedPos);
 						coin->OnBounce(bounceDir);
+						// ★ 接触したフチの位置から弾く方向へ火花発生
+						ParticleManager::GetInstance()->EmitCoinBounce(pushedPos, bounceDir);
 					}
 				}
 				else
@@ -680,14 +675,7 @@ void GamePlayScene::Draw()
 	// SRVヒープの再セット
 	SrvManager::GetInstance()->PreDraw();
 
-	// 1. パーティクル描画
-	ParticleManager::GetInstance()->Draw(
-		camera,
-		ringTexHandle,
-		cylinderTexHandle,
-		sphereTexHandle,
-		lightningTexHandle
-	);
+	
 
 	// 2. 3Dオブジェクトの描画
 	Object3dCommon::GetInstance()->CommonDrawSettings();
@@ -707,6 +695,15 @@ void GamePlayScene::Draw()
 	{
 		coin->Draw();
 	}
+
+	// パーティクル描画
+	ParticleManager::GetInstance()->Draw(
+		camera,
+		ringTexHandle,
+		cylinderTexHandle,
+		sphereTexHandle,
+		lightningTexHandle
+	);
 
 	// 3. スカイボックスの描画
 	SkyboxCommon::GetInstance()->CommonDrawSettings(DirectXCommon::GetInstance()->GetCommandList());
@@ -759,11 +756,6 @@ void GamePlayScene::Draw()
 	if (skillCostUISprite_ && skillManager_ && skillManager_->IsTimeSlowed())
 	{
 		skillCostUISprite_->Draw(DirectXCommon::GetInstance()->GetCommandList(), skillCostUIHandle_);
-	}
-
-	if (clearUISprite_)
-	{
-		clearUISprite_->Draw(DirectXCommon::GetInstance()->GetCommandList(), clearTexIndex);
 	}
 
 	auto commandList = DirectXCommon::GetInstance()->GetCommandList();
@@ -908,11 +900,6 @@ void GamePlayScene::Finalize()
 		minusSprite_ = nullptr;
 	}
 
-	if (clearUISprite_)
-	{
-		delete clearUISprite_;
-		clearUISprite_ = nullptr;
-	}
 
 	if (object3d)
 	{

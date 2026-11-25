@@ -134,8 +134,5 @@ private:
 	//スキルコストUIの描画用
 	Sprite* skillCostUISprite_ = nullptr;
 	D3D12_GPU_DESCRIPTOR_HANDLE skillCostUIHandle_{};
-
-	Sprite* clearUISprite_ = nullptr; 
-	D3D12_GPU_DESCRIPTOR_HANDLE clearTexIndex{};
 };
 

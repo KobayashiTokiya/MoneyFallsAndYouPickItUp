@@ -100,6 +100,12 @@ public:
 	// クリア演出用：指定座標にカラフルな花火を打ち上げる
 	void EmitFirework(const Vector3& position);
 
+	// コイン回収時のキラキラ演出（金額に応じて色が変わる）
+		void EmitCoinGet(const Vector3 & position, int score);
+
+	// カップのフチに当たって弾いた時の火花演出
+	void EmitCoinBounce(const Vector3& position, const Vector3& bounceDir);
+
 	void DrawImGui();
 
 	D3D12_BLEND_DESC GetBlendDesc(BlendMode mode);

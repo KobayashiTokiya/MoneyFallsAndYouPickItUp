@@ -402,6 +402,106 @@ void ParticleManager::EmitFirework(const Vector3& position)
 
 	currentSpawnType = backupType;
 }
+
+void ParticleManager::EmitCoinGet(const Vector3& position, int score)
+{
+	ParticleType backupType = currentSpawnType;
+	currentSpawnType = ParticleType::kFirework;
+
+	Emitter sparkEmitter = emitter;
+	sparkEmitter.transform.translate = position;
+
+	// コインの金額によって粒の数と色を変える
+	Vector4 baseColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+	if (score >= 500)
+	{
+		sparkEmitter.count = 25;
+		baseColor = { 1.0f, 0.85f, 0.1f, 1.0f }; // 500円：豪華な金色
+	}
+	else if (score >= 100)
+	{
+		sparkEmitter.count = 18;
+		baseColor = { 0.3f, 0.9f, 1.0f, 1.0f };  // 100円：爽やかな水色
+	}
+	else if (score > 0)
+	{
+		sparkEmitter.count = 14;
+		baseColor = { 1.0f, 0.6f, 0.25f, 1.0f }; // 10円：オレンジ（銅色）
+	}
+	else
+	{
+		sparkEmitter.count = 22;
+		baseColor = { 0.85f, 0.15f, 1.0f, 1.0f }; // マイナス：危険な紫色
+	}
+
+	auto sparkList = Emit(sparkEmitter, randomEngine_);
+
+	const float kPi = 3.14159265f;
+	for (auto& p : sparkList)
+	{
+		p.transform.translate = position;
+		p.lifeTime = 0.5f + static_cast<float>(rand() % 20) * 0.01f;
+		p.color = baseColor;
+
+		float s = 0.12f + static_cast<float>(rand() % 6) * 0.01f;
+		p.transform.scale = { s, s, s };
+
+		float theta = (static_cast<float>(rand()) / RAND_MAX) * 2.0f * kPi;
+		float horizontalSpeed = 5.0f + (static_cast<float>(rand()) / RAND_MAX) * 4.0f;
+		float upSpeed = 6.0f + (static_cast<float>(rand()) / RAND_MAX) * 4.0f;
+
+		p.velocity = {
+			std::cos(theta) * horizontalSpeed,
+			upSpeed,
+			std::sin(theta) * horizontalSpeed
+		};
+	}
+
+	particles.splice(particles.end(), sparkList);
+	currentSpawnType = backupType;
+}
+
+void ParticleManager::EmitCoinBounce(const Vector3& position, const Vector3& bounceDir)
+{
+	ParticleType backupType = currentSpawnType;
+	currentSpawnType = ParticleType::kFirework;
+
+	Emitter spikeEmitter = emitter;
+	spikeEmitter.transform.translate = position;
+	spikeEmitter.count = 14; // ★ 本数を 10 → 14 に増量
+
+	auto spikeList = Emit(spikeEmitter, randomEngine_);
+
+	for (auto& p : spikeList)
+	{
+		p.transform.translate = position;
+		p.lifeTime = 0.28f + static_cast<float>(rand() % 10) * 0.01f;
+		p.color = { 1.0f, 0.25f, 0.3f, 1.0f };
+
+		float length = 0.75f + static_cast<float>(rand() % 35) * 0.01f;
+		p.transform.scale = { 0.055f, length, 0.055f };
+
+		float randX = (static_cast<float>(rand()) / RAND_MAX) * 2.0f - 1.0f;
+		float randY = (static_cast<float>(rand()) / RAND_MAX) * 1.5f - 0.5f;
+		float randZ = (static_cast<float>(rand()) / RAND_MAX) * 2.0f - 1.0f;
+		float speed = 11.0f + (static_cast<float>(rand()) / RAND_MAX) * 4.0f;
+
+		p.velocity = {
+			bounceDir.x * speed + randX * 3.5f,
+			bounceDir.y * speed + randY * 2.5f,
+			bounceDir.z * speed + randZ * 3.5f
+		};
+
+		float horiz = std::sqrt(p.velocity.x * p.velocity.x + p.velocity.z * p.velocity.z);
+		float rotZ = -std::atan2(horiz, p.velocity.y);
+		float rotY = std::atan2(-p.velocity.z, p.velocity.x);
+		p.transform.rotate = { 0.0f, rotY, rotZ };
+	}
+
+	particles.splice(particles.end(), spikeList);
+	currentSpawnType = backupType;
+}
+
 void ParticleManager::DrawImGui()
 {
 #ifdef USE_IMGUI
