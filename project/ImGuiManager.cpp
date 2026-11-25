@@ -1,6 +1,7 @@
 #include "ImGuiManager.h"
 #ifdef USE_IMGUI
 
+#include "Object3dCommon.h"
 #include "SrvManager.h"
 #pragma comment(lib, "imgui.lib")
 
@@ -210,4 +211,83 @@ void ImGuiManager::UpdateTitleUI(
 	
 	ImGui::End(); // ウィンドウの終わり
 }
+
+void ImGuiManager::UpdateLightUI()
+{
+	auto common = Object3dCommon::GetInstance();
+	Vector3 dir = common->GetLightDirection();
+	Vector4 color = common->GetLightColor();
+	float intensity = common->GetLightIntensity();
+
+	ImGui::Begin("Directional Light");
+
+	if (ImGui::DragFloat3("Direction", &dir.x, 0.01f, -1.0f, 1.0f))
+	{
+		common->SetLightDirection(dir);
+	}
+	if (ImGui::ColorEdit4("Color", &color.x))
+	{
+		common->SetLightColor(color);
+	}
+	if (ImGui::DragFloat("Intensity", &intensity, 0.01f, 0.0f, 5.0f))
+	{
+		common->SetLightIntensity(intensity);
+	}
+
+	ImGui::Separator();
+
+	if (ImGui::Button("Save"))
+	{
+		common->SaveLightSettings();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Load"))
+	{
+		common->LoadLightSettings();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Reset"))
+	{
+		common->SetLightDirection({ 0.3f, -0.8f, 0.5f });
+		common->SetLightColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+		common->SetLightIntensity(1.0f);
+	}
+
+	ImGui::End();
+}
+
+void ImGuiManager::UpdateClearUI(
+	Vector3& playerTranslate, Vector3& playerRotate, Vector3& playerScale,
+	Vector3& clearTranslate, Vector3& clearScale,
+	Vector3& cameraTranslate, Vector3& cameraTarget
+)
+{
+	ImGui::Begin("Clear Controller");
+
+	ImGui::Text("Player");
+	ImGui::DragFloat3("PTranslate", &playerTranslate.x, 0.05f);
+	ImGui::DragFloat3("PRotate", &playerRotate.x, 0.05f);
+	ImGui::DragFloat3("PScale", &playerScale.x, 0.05f);
+
+	ImGui::Separator();
+
+	ImGui::Text("Clear Logo");
+	ImGui::DragFloat3("CLogoTranslate", &clearTranslate.x, 0.05f);
+	ImGui::DragFloat3("CLogoScale", &clearScale.x, 0.05f);
+
+	ImGui::Separator();
+
+	ImGui::Text("Camera");
+	ImGui::DragFloat3("CamTranslate", &cameraTranslate.x, 0.05f);
+	ImGui::DragFloat3("CamTarget", &cameraTarget.x, 0.05f);
+
+	ImGui::End();
+
+	// クリア画面でもライト調整ウィンドウを一緒に表示する
+	UpdateLightUI();
+}
+
+
+
+
 #endif

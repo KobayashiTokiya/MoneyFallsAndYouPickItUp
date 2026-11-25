@@ -13,6 +13,7 @@
 #include "Player.h"
 #include "Coin.h"
 #include "SkillManager.h"
+#include "StageManager.h"
 
 // 前方宣言
 class Camera;
@@ -59,6 +60,7 @@ private:
 	PostProcess* postProcess = nullptr;
 	std::vector<Object3d*> objects3d_;
 	std::unique_ptr<SkillManager> skillManager_;
+	std::unique_ptr<StageManager> stageManager_;
 
 	// GPUハンドル
 	D3D12_GPU_DESCRIPTOR_HANDLE ringTexHandle{};

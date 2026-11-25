@@ -1,4 +1,6 @@
 #include "Object3dCommon.h"
+#include "externals/imgui/imgui.h"
+#include <fstream>
 
 Object3dCommon* Object3dCommon::GetInstance()
 {
@@ -16,6 +18,9 @@ void Object3dCommon::Initialize(DirectXCommon* dxCommon)
 
 	// 3. そのルートシグネチャを使って「PSO」を作る
 	CreateGraphicsPipelineState();
+
+	// 4. 保存済みのライト設定があれば読み込む
+	LoadLightSettings();
 }
 
 void Object3dCommon::Update()
@@ -269,3 +274,82 @@ D3D12_BLEND_DESC Object3dCommon::GetBlendDesc(BlendMode mode)
 	return blendDesc;
 
 }
+
+
+#pragma region ライト関係
+void Object3dCommon::SaveLightSettings()
+{
+	// テキストファイルに現在の向き・色・強さを書き出す
+	std::ofstream file("Resource/light_settings.txt");
+	if (file.is_open())
+	{
+		file << lightDirection_.x << " " << lightDirection_.y << " " << lightDirection_.z << "\n";
+		file << lightColor_.x << " " << lightColor_.y << " " << lightColor_.z << " " << lightColor_.w << "\n";
+		file << lightIntensity_ << "\n";
+		file.close();
+
+		// 画面に「Saved!」を2秒間表示する
+		saveMessageTimer_ = 2.0f;
+	}
+}
+
+void Object3dCommon::LoadLightSettings()
+{
+	// 保存ファイルがあれば読み込む（初回起動時などファイルが無い場合は初期値のまま）
+	std::ifstream file("Resource/light_settings.txt");
+	if (file.is_open())
+	{
+		file >> lightDirection_.x >> lightDirection_.y >> lightDirection_.z;
+		file >> lightColor_.x >> lightColor_.y >> lightColor_.z >> lightColor_.w;
+		file >> lightIntensity_;
+		file.close();
+	}
+}
+
+void Object3dCommon::DrawImGui()
+{
+#ifdef USE_IMGUI
+	ImGui::Begin("Directional Light");
+
+	// リアルタイム調整スライダー
+	ImGui::DragFloat3("Direction", &lightDirection_.x, 0.01f, -1.0f, 1.0f);
+	ImGui::ColorEdit4("Color", &lightColor_.x);
+	ImGui::DragFloat("Intensity", &lightIntensity_, 0.01f, 0.0f, 5.0f);
+
+	ImGui::Separator();
+
+	// ファイルへ保存ボタン
+	if (ImGui::Button("Save"))
+	{
+		SaveLightSettings();
+	}
+	ImGui::SameLine();
+
+	// 保存した状態に戻すボタン
+	if (ImGui::Button("Load"))
+	{
+		LoadLightSettings();
+	}
+	ImGui::SameLine();
+
+	// 初期値にリセットするボタン
+	if (ImGui::Button("Reset"))
+	{
+		lightDirection_ = { 0.3f, -0.8f, 0.5f };
+		lightColor_ = { 1.0f, 1.0f, 1.0f, 1.0f };
+		lightIntensity_ = 1.0f;
+	}
+
+	// 保存完了のフィードバック表示
+	if (saveMessageTimer_ > 0.0f)
+	{
+		saveMessageTimer_ -= 1.0f / 60.0f;
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "Saved!");
+	}
+
+	ImGui::End();
+#endif
+}
+#pragma endregion
+

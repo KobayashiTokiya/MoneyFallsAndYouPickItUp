@@ -180,6 +180,18 @@ void ParticleManager::Update(Camera* camera)
 			it->transform.translate.y += it->velocity.y * kDeltaTime;
 			it->transform.translate.z += it->velocity.z * kDeltaTime;
 		}
+		else if (it->type == ParticleType::kFirework)
+		{
+			it->transform.translate.x += it->velocity.x * kDeltaTime;
+			it->transform.translate.y += it->velocity.y * kDeltaTime;
+			it->transform.translate.z += it->velocity.z * kDeltaTime;
+			//空気抵抗
+			it->velocity.x *= 0.94f;
+			it->velocity.y *= 0.94f;
+			it->velocity.z *= 0.94f;
+			//重力で垂れ下がる
+			it->velocity.y -= 2.5f * kDeltaTime;
+		}
 		else
 		{
 			it->transform.scale.x += expansionSpeed * kDeltaTime;
@@ -301,6 +313,8 @@ void ParticleManager::Draw(
 	// 稲妻（Lightning）を描画する直前で、加算ブレンド（Add）に切り替える！
 	commandList->SetPipelineState(graphicsPipelineState_[static_cast<int>(BlendMode::kBlendModeAdd)].Get());
 	DrawType(ParticleType::kLightning, lightningSrvHandle, &lightningVertexBufferView_, lightningVertices_.size());
+	DrawType(ParticleType::kFirework, sphereSrvHandle, &sphereVertexBufferView_, sphereVertices_.size());
+
 }
 
 std::list<Particle> ParticleManager::Emit(const Emitter& emitter, std::mt19937& randomEngine)
@@ -332,6 +346,159 @@ void ParticleManager::EmitComboExplosion(const Vector3& position)
 	comboEmitter.count = 1;
 	particles.splice(particles.end(), Emit(comboEmitter, randomEngine_));
 
+	currentSpawnType = backupType;
+}
+
+void ParticleManager::EmitFirework(const Vector3& position)
+{
+	ParticleType backupType = currentSpawnType;
+	currentSpawnType = ParticleType::kFirework;
+	Emitter sparkEmitter = emitter;
+	sparkEmitter.transform.translate = position;
+	sparkEmitter.count = 100;
+	auto sparkList = Emit(sparkEmitter, randomEngine_);
+
+	// 花火の色をランダムに1色決める（金・赤・水色・緑・ピンク）
+	const Vector4 colors[] = {
+		{ 1.0f, 0.85f, 0.1f, 1.0f },  // 金
+		{ 1.0f, 0.25f, 0.25f, 1.0f }, // 赤
+		{ 0.2f, 0.85f, 1.0f, 1.0f },  // 水色
+		{ 0.3f, 1.0f, 0.4f, 1.0f },   // 緑
+		{ 1.0f, 0.4f, 0.9f, 1.0f },   // ピンク
+		{ 1.0f, 0.55f, 0.1f, 1.0f },  // オレンジ
+	};
+	const int colorCount = static_cast<int>(sizeof(colors) / sizeof(colors[0]));
+
+	const float kPi = 3.14159265f;
+	for (auto& p : sparkList)
+	{
+		// 爆発の中心点から一斉に飛び出す
+		p.transform.translate = position;
+		p.lifeTime = 0.8f + static_cast<float>(rand() % 30) * 0.01f;
+
+		// ★ ループの中で毎回抽選して、1粒ずつ色をバラバラにする
+		p.color = colors[rand() % colorCount];
+
+		// 火の粉らしい小さめの丸にする
+		float s = 0.08f + static_cast<float>(rand() % 7) * 0.01f;
+		p.transform.scale = { s, s, s };
+
+		// 球状（360度）のランダムな方向ベクトルを計算
+		float theta = (static_cast<float>(rand()) / RAND_MAX) * 2.0f * kPi;
+		float cosPhi = (static_cast<float>(rand()) / RAND_MAX) * 2.0f - 1.0f;
+		float sinPhi = std::sqrt(1.0f - cosPhi * cosPhi);
+
+		// 飛び散るスピード
+		float speed = 10.0f + (static_cast<float>(rand()) / RAND_MAX) * 5.0f;
+
+		p.velocity = {
+			sinPhi * std::cos(theta) * speed,
+			cosPhi * speed,
+			sinPhi * std::sin(theta) * speed
+		};
+	}
+
+	particles.splice(particles.end(), sparkList);
+
+	currentSpawnType = backupType;
+}
+
+void ParticleManager::EmitCoinGet(const Vector3& position, int score)
+{
+	ParticleType backupType = currentSpawnType;
+	currentSpawnType = ParticleType::kFirework;
+
+	Emitter sparkEmitter = emitter;
+	sparkEmitter.transform.translate = position;
+
+	// コインの金額によって粒の数と色を変える
+	Vector4 baseColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+	if (score >= 500)
+	{
+		sparkEmitter.count = 25;
+		baseColor = { 1.0f, 0.85f, 0.1f, 1.0f }; // 500円：豪華な金色
+	}
+	else if (score >= 100)
+	{
+		sparkEmitter.count = 18;
+		baseColor = { 0.3f, 0.9f, 1.0f, 1.0f };  // 100円：爽やかな水色
+	}
+	else if (score > 0)
+	{
+		sparkEmitter.count = 14;
+		baseColor = { 1.0f, 0.6f, 0.25f, 1.0f }; // 10円：オレンジ（銅色）
+	}
+	else
+	{
+		sparkEmitter.count = 22;
+		baseColor = { 0.85f, 0.15f, 1.0f, 1.0f }; // マイナス：危険な紫色
+	}
+
+	auto sparkList = Emit(sparkEmitter, randomEngine_);
+
+	const float kPi = 3.14159265f;
+	for (auto& p : sparkList)
+	{
+		p.transform.translate = position;
+		p.lifeTime = 0.5f + static_cast<float>(rand() % 20) * 0.01f;
+		p.color = baseColor;
+
+		float s = 0.12f + static_cast<float>(rand() % 6) * 0.01f;
+		p.transform.scale = { s, s, s };
+
+		float theta = (static_cast<float>(rand()) / RAND_MAX) * 2.0f * kPi;
+		float horizontalSpeed = 5.0f + (static_cast<float>(rand()) / RAND_MAX) * 4.0f;
+		float upSpeed = 6.0f + (static_cast<float>(rand()) / RAND_MAX) * 4.0f;
+
+		p.velocity = {
+			std::cos(theta) * horizontalSpeed,
+			upSpeed,
+			std::sin(theta) * horizontalSpeed
+		};
+	}
+
+	particles.splice(particles.end(), sparkList);
+	currentSpawnType = backupType;
+}
+
+void ParticleManager::EmitCoinBounce(const Vector3& position, const Vector3& bounceDir)
+{
+	ParticleType backupType = currentSpawnType;
+	currentSpawnType = ParticleType::kFirework;
+
+	Emitter spikeEmitter = emitter;
+	spikeEmitter.transform.translate = position;
+	spikeEmitter.count = 14; // ★ 本数を 10 → 14 に増量
+
+	auto spikeList = Emit(spikeEmitter, randomEngine_);
+
+	for (auto& p : spikeList)
+	{
+		p.transform.translate = position;
+		p.lifeTime = 0.28f + static_cast<float>(rand() % 10) * 0.01f;
+		p.color = { 1.0f, 0.25f, 0.3f, 1.0f };
+
+		float length = 0.75f + static_cast<float>(rand() % 35) * 0.01f;
+		p.transform.scale = { 0.055f, length, 0.055f };
+
+		float randX = (static_cast<float>(rand()) / RAND_MAX) * 2.0f - 1.0f;
+		float randY = (static_cast<float>(rand()) / RAND_MAX) * 1.5f - 0.5f;
+		float randZ = (static_cast<float>(rand()) / RAND_MAX) * 2.0f - 1.0f;
+		float speed = 11.0f + (static_cast<float>(rand()) / RAND_MAX) * 4.0f;
+
+		p.velocity = {
+			bounceDir.x * speed + randX * 3.5f,
+			bounceDir.y * speed + randY * 2.5f,
+			bounceDir.z * speed + randZ * 3.5f
+		};
+
+		float horiz = std::sqrt(p.velocity.x * p.velocity.x + p.velocity.z * p.velocity.z);
+		float rotZ = -std::atan2(horiz, p.velocity.y);
+		float rotY = std::atan2(-p.velocity.z, p.velocity.x);
+		p.transform.rotate = { 0.0f, rotY, rotZ };
+	}
+
+	particles.splice(particles.end(), spikeList);
 	currentSpawnType = backupType;
 }
 
